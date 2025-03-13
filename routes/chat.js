@@ -9,7 +9,7 @@ const multer = require("multer");
 require('dotenv').config();
 const {verifyToken} = require('../middlewares/verifyToken')
 
-const TABLE_NAME = 'chat';
+const TABLE_NAME = 'chat_dev';
 // Multer file filter (allow images, videos, and documents)
 const fileFilter = (req, file, cb) => {
 	if (
@@ -95,7 +95,7 @@ router.post("/send",verifyToken, upload.fields([{ name: "image" }, { name: "vide
 				updatedDate:new Date().toISOString()
 			}
 			const chatParams = {
-				TableName: 'chat',
+				TableName: TABLE_NAME,
 				FilterExpression: "senderId = :senderIdData AND receiverId = :receiverIdData",
 				ExpressionAttributeValues: {
 				  ":senderIdData": body.senderId,      // Boolean true
