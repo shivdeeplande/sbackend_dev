@@ -13,7 +13,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 //Define the required scopes
 const SCOPES = ["https://www.googleapis.com/auth/firebase.messaging"];
 
-const NOTIFICATION_TABLE_NAME = 'notifications'; 
+const NOTIFICATION_TABLE_NAME = 'notifications_dev'; 
 
 //Create a JWT Client
 const client = new JWT({

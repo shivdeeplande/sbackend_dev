@@ -9,7 +9,7 @@ const multer = require("multer");
 require('dotenv').config();
 const {verifyToken} = require('../middlewares/verifyToken')
 
-const TABLE_NAME = 'users';
+const TABLE_NAME = 'users_dev';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const { getAllItems, batchInsertLargeDataset, getConditionalRecords,addNewColumnToAllItems,
@@ -63,7 +63,7 @@ router.post('/socialLogin', async (req, res) => {
 			res.errors({message:'Mobile Number Required'})
 		}else {
 			const userParams = {
-				TableName: 'users',
+				TableName: TABLE_NAME,
 				FilterExpression: "isSocialLogin = :socialLogin AND mobile = :mobileData",
 				ExpressionAttributeValues: {
 				  ":socialLogin": true,      // Boolean true
@@ -155,7 +155,7 @@ router.post('/login', async (req, res) => {
 			res.errors({message:'Mobile Number Required'})
 		}else {
 			const userParams = {
-				TableName: 'users',
+				TableName: TABLE_NAME,
 				FilterExpression: "isSocialLogin = :socialLogin AND mobile = :mobileData",
 				ExpressionAttributeValues: {
 				  ":socialLogin": "false",      // Boolean true
@@ -407,7 +407,7 @@ router.post('/users', upload.single("file"), async (req, res) => {
 			res.errors({message:'sessionId Required'})
 		}else{
 			const userParams = {
-				TableName: 'users',
+				TableName: TABLE_NAME,
 				FilterExpression: "isSocialLogin = :socialLogin AND mobile = :mobileData",
 				ExpressionAttributeValues: {
 				  ":socialLogin": "false",      // Boolean true

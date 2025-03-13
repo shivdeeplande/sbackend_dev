@@ -2,9 +2,9 @@
   "name": "short-url",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dev.js",
   "scripts": {
-    "start": "nodemon index.js"
+    "start": "nodemon dev.js"
   },
   "author": "",
   "license": "ISC",
