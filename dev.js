@@ -72,9 +72,9 @@ app.use("/api/v1/dashboard", dashboardRoute);
 app.use("/api/v1/chat", chatRoute);
 app.use("/api/v1/notification", notificationRoute);
 
-app.listen(PORT, () => console.log(`Server Started at PORT:${PORT}`));
+// app.listen(PORT, () => console.log(`Server Started at PORT:${PORT}`));
 // Create HTTPS Server
-// const server = https.createServer(options, app)
-// server.listen(PORT, () => {
-//     console.log(`🚀 HTTPS Server running at https://localhost:${PORT}`);
-//   });
+const server = https.createServer(options, app)
+server.listen(PORT, () => {
+    console.log(`🚀 HTTPS Server running at https://localhost:${PORT}`);
+  });
