@@ -5,6 +5,7 @@ const cors = require('cors');
 const https = require("https");
 const cookieParser = require("cookie-parser");
 const i18n = require("i18n");
+const  translateMiddleware  = require("./middlewares/translateMiddleware");
 const { restrictToLoggedinUserOnly, checkAuth } = require("./middlewares/auth");
 const responseFormatter = require('./middlewares/responseFormator')
 const userRoute = require("./routes/user");
@@ -33,19 +34,20 @@ const options = {
   };
 
 // Configure i18n
-i18n.configure({
- locales: ["en", "hi"], // Supported languages
+// i18n.configure({
+//  locales: ["en", "hi"], // Supported languages
  
- directory: path.join(__dirname, '/locales'),
- defaultLocale: "en", // Default language
- queryParameter: "lang", // Language switch via query params (e.g., ?lang=hi)
- autoReload: true, // Auto-reload on file change
- syncFiles: true, // Sync missing translations
- objectNotation: true,
-});
+//  directory: path.join(__dirname, '/locales'),
+//  defaultLocale: "en", // Default language
+//  queryParameter: "lang", // Language switch via query params (e.g., ?lang=hi)
+//  autoReload: true, // Auto-reload on file change
+//  syncFiles: true, // Sync missing translations
+//  objectNotation: true,
+// });
 
 // Middleware to use i18n
-app.use(i18n.init);
+// app.use(i18n.init);
+app.use(translateMiddleware);
 app.use(cors());
 app.use(express.json());
 //app.use(morgan('dev'));

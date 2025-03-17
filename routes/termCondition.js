@@ -8,11 +8,11 @@ const {verifyToken} = require('../middlewares/verifyToken')
 const TABLE_NAME = 'termcondition';
 
 const upload = multer({ storage: multer.memoryStorage() });
-const { getAllItems, generateRandomString, getLastValue,generateAuthToken,uploadFileToS3, deleteFileFromS3, insertItem, updateItem,filterItemsByQuery, getMultipleItemsByQuery,getSingleItemById, deleteSingleItemById, sendSMSMessage } = require('../service/dynamo');
+const { getAllItems, hindiTranslate, generateRandomString, getLastValue,generateAuthToken,uploadFileToS3, deleteFileFromS3, insertItem, updateItem,filterItemsByQuery, getMultipleItemsByQuery,getSingleItemById, deleteSingleItemById, sendSMSMessage } = require('../service/dynamo');
 router.get('/', async (req, res) => {
 	try {
 		const items = await getAllItems(TABLE_NAME);
-		res.success({data:items.Items})
+		res.success({data:items.Items});
 	} catch (err) {
 		res.errors({message:'Something went wrong'})
 	}

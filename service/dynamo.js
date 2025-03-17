@@ -11,6 +11,9 @@ AWS.config.update({
 	secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
 });
 
+// Configure AWS Translate
+// const translate = new AWS.Translate({ region: process.env.AWS_DEFAULT_REGION });
+
 // Create an SNS client with the specified configuration
 const sns = new SNSClient({
 	region: process.env.AWS_DEFAULT_REGION, // AWS region from environment variables
@@ -411,6 +414,27 @@ const addNewColumnToAllItems = async(tableName, columnName, defaultValue)=>{
         console.error("❌ Error updating items:", error);
     }
 }
+
+
+// Function to translate text
+// const hindiTranslate = async(text) => {
+// 	const params = {
+// 	  Text: text,
+// 	  SourceLanguageCode: "en",
+// 	  TargetLanguageCode: "hi",
+// 	};
+  
+// 	try {
+// 	  const result = await translate.translateText(params).promise();
+// 	  return result.TranslatedText;
+// 	} catch (error) {
+// 	  console.error("Translation Error:", error);
+// 	  return null;
+// 	}
+//   }
+
+
+
 module.exports = {
 	DocumentClient,
 	getAllItems,
@@ -436,5 +460,6 @@ module.exports = {
 	hashPassword,
 	comparePassword,
 	batchInsertLargeDataset,
-	addNewColumnToAllItems
+	addNewColumnToAllItems,
+	// hindiTranslate,
 };
