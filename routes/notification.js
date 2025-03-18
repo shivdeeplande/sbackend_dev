@@ -2,7 +2,7 @@ const express = require("express");
 const admin = require("firebase-admin");
 const axios = require("axios");
 const serviceAccount = require("../serviceAccountKey.json");
-const { insertItem, getAllItems, uploadFileToS3 } = require("../service/dynamo");
+const { insertItem, getAllItems, uploadFileToS3, getConditionalRecords } = require("../service/dynamo");
 const router = express.Router();
 const { JWT } = require("google-auth-library");
 const multer = require("multer");
@@ -85,7 +85,8 @@ router.post("/createNotification", upload.single("file"), async (req, res) => {
 
 router.get("/fetchAllNotifications", async (req,res) => {
   try {
-    const notifications = await getAllItems(NOTIFICATION_TABLE_NAME);
+    // const notifications = await getAllItems(NOTIFICATION_TABLE_NAME);
+
 
     const today = new Date();
 		// Get the timestamp for 7 days ago
@@ -96,23 +97,24 @@ router.get("/fetchAllNotifications", async (req,res) => {
 		const sevenDaysAfter = new Date();
 		sevenDaysAfter.setDate(sevenDaysAfter.getDate() + 7);
 
+    // Convert to YYYY-MM-DD format
+		const formattedDate = sevenDaysAgo.toISOString().split("T")[0];
+
+
     const notificationParams = {
-      TableName: 'notifications',
-      FilterExpression: "updatedDate >= :sevenDaysAgo AND (isVisible= :isVisibleString OR isVisible= :isVisibleBool)",
+      TableName: NOTIFICATION_TABLE_NAME,
+      FilterExpression: "updatedDate >= :sevenDaysAgo",
       ExpressionAttributeValues: {
         ":sevenDaysAgo": formattedDate,
-        ":isVisibleBool":  true,
-        ":isVisibleString": "true",
       },
       };
 
 
-    console.log("sevenDaysBefore", sevenDaysAgo);
-    console.log("sevenDaysAfter", sevenDaysAfter);
+    const filteredNotification = await getConditionalRecords(notificationParams);
 
     res.success({
       message: "Notifications found successfully",
-      data: notifications
+      data: filteredNotification
     })
   } catch (err) {
     res.errors({message:'Something went wrong',data:err})
