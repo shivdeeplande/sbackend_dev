@@ -98,8 +98,8 @@ async function translateMiddleware(req, res, next) {
         try {
             // Determine language: Default is English, check `query.lang` or `Accept-Language` header
             const langQuery = req.query.lang;
-            const langHeader = req.headers["accept-language"];
-            const targetLang = langQuery || langHeader === "hi" ? "hi" : "en";
+            const langHeader = (req.headers["lang"] || req.headers["accept-language"] || "en").toLowerCase();
+            const targetLang = langQuery ? langQuery.toLowerCase() : langHeader;
 
             if (targetLang === "en") {
                 return originalJson.call(this, data); // If English, send original data
