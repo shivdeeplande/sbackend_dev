@@ -117,6 +117,7 @@ const sendSMSMessage = async(params) =>{
     return message;
 }
 
+//Connect to Dynamo Db
 const DocumentClient = new AWS.DynamoDB.DocumentClient();
 
 const getAllItems = async (TABLE_NAME) => {
@@ -327,7 +328,7 @@ const deleteSingleItemById = async (TABLE_NAME, id) => {
 	return await DocumentClient.delete(params).promise();
 };
 const batchInsertLargeDataset=async(districts) =>{
-	const tableName = "districts";
+	const tableName = "districts_dev";
 	const chunkSize = 25;
   
 	for (let i = 0; i < districts.length; i += chunkSize) {

@@ -5,7 +5,7 @@ const multer = require("multer");
 require('dotenv').config();
 const {verifyToken} = require('../middlewares/verifyToken')
 
-const TABLE_NAME = 'termcondition';
+const TABLE_NAME = 'termcondition_dev';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const { getAllItems, hindiTranslate, generateRandomString, getLastValue,generateAuthToken,uploadFileToS3, deleteFileFromS3, insertItem, updateItem,filterItemsByQuery, getMultipleItemsByQuery,getSingleItemById, deleteSingleItemById, sendSMSMessage } = require('../service/dynamo');

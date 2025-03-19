@@ -8,7 +8,7 @@ const multer = require("multer");
 require('dotenv').config();
 const {verifyToken} = require('../middlewares/verifyToken')
 
-const ADMIN_TABLE_NAME = 'admin';
+const ADMIN_TABLE_NAME = 'admin_dev';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const { getAllItems, generateRandomString,hashPassword,

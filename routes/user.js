@@ -670,7 +670,7 @@ router.post("/cities", async (req, res) => {
     } else if (!body.districtId) {
       res.errors({ message: "districtId Required" });
     } else {
-      const cities = await getAllItems("cities");
+      const cities = await getAllItems("cities_dev");
 
       body.id = cities.Items.length + 1;
 
@@ -688,7 +688,7 @@ router.post("/cities", async (req, res) => {
           createDate: new Date().toISOString(),
           updatedDate: new Date().toISOString(),
         };
-        const newItem = await insertItem("cities", item);
+        const newItem = await insertItem("cities_dev", item);
         console.log("newItem", newItem);
         res.success({ data: item, message: "city added successfuly" });
       }
@@ -699,7 +699,7 @@ router.post("/cities", async (req, res) => {
 });
 router.get("/cities", async (req, res) => {
   try {
-    const items = await getAllItems("cities");
+    const items = await getAllItems("cities_dev");
     res.success({ data: items.Items });
   } catch (err) {
     res.errors({ message: "Something went wrong" });
@@ -707,7 +707,7 @@ router.get("/cities", async (req, res) => {
 });
 router.get("/districts", async (req, res) => {
   try {
-    const items = await getAllItems("districts");
+    const items = await getAllItems("districts_dev");
     res.success({ data: items.Items });
   } catch (err) {
     res.errors({ message: "Something went wrong" });

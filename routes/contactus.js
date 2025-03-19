@@ -5,7 +5,7 @@ const multer = require("multer");
 require('dotenv').config();
 const {verifyToken} = require('../middlewares/verifyToken')
 
-const TABLE_NAME = 'contactus';
+const TABLE_NAME = 'contactus_dev';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const { getAllItems, insertItem, updateItem,filterItemsByQuery, getMultipleItemsByQuery,getSingleItemById, deleteSingleItemById, sendSMSMessage } = require('../service/dynamo');

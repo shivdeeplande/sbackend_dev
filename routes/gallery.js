@@ -5,7 +5,7 @@ const multer = require("multer");
 require('dotenv').config();
 const {verifyToken} = require('../middlewares/verifyToken')
 
-const TABLE_NAME = 'gallery';
+const TABLE_NAME = 'gallery_dev';
 // Multer file filter (allow images, videos)
 const fileFilter = (req, file, cb) => {
 	if (
