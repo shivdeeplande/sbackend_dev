@@ -8,7 +8,7 @@ const multer = require("multer");
 require('dotenv').config();
 const {verifyToken} = require('../middlewares/verifyToken')
 
-const ADMIN_TABLE_NAME = 'admin_dev';
+const ADMIN_TABLE_NAME = 'admin';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const { getAllItems, generateRandomString,hashPassword,
@@ -210,7 +210,7 @@ router.delete('/delete/:id', async (req, res) => {
 	}
 });
 //--------------news--------------------
-const NEWS_TABLE_NAME = 'news'
+const NEWS_TABLE_NAME = 'news_dev'
 router.get('/news', async (req, res) => {
 	try {
 		const items = await getAllItems(NEWS_TABLE_NAME);
