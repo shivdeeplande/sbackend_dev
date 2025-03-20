@@ -8,7 +8,7 @@ const multer = require("multer");
 require('dotenv').config();
 const {verifyToken} = require('../middlewares/verifyToken')
 
-const ADMIN_TABLE_NAME = 'admin';
+const ADMIN_TABLE_NAME = 'admin_dev';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const { getAllItems, generateRandomString,hashPassword,
@@ -126,7 +126,7 @@ router.post('/add', upload.single("file"), async (req, res) => {
 						createDate:new Date().toISOString(),
 						updatedDate:new Date().toISOString()
 					}
-					console.log('item',item);
+					// console.log('item',item);
 					
 					const newItem = await insertItem(ADMIN_TABLE_NAME, item);
 					console.log('newItem', newItem);
