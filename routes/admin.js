@@ -35,6 +35,7 @@ router.post('/login', async (req, res) => {
 			const expressionAttributeValues = {
 				":email":body.email
 			}
+
 			const getData = await getMultipleItemsByQuery(ADMIN_TABLE_NAME, indexName, keyConditionExpression, expressionAttributeValues);
 			console.log('getData', getData);
 
@@ -48,7 +49,7 @@ router.post('/login', async (req, res) => {
 						role: data.role, // Example role
 					};				  
 					const token = await generateAuthToken(userPayload);
-					console.log('Generated JWT:', token);
+					// console.log('Generated JWT:', token);
 					data.token = token
 					res.success({data:data})
 				}else{
@@ -106,7 +107,7 @@ router.post('/add', upload.single("file"), async (req, res) => {
 						//res.status(200).send({ message: "File uploaded successfully", url: result.Location });
 					}
 					const hashedPassword = await hashPassword(body.password);
-					console.log('Stored Hashed Password:', hashedPassword);
+					// console.log('Stored Hashed Password:', hashedPassword);
 					const role = body.role || 'admin'
 					const item = {
 						id:body.id,
