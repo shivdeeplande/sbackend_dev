@@ -184,7 +184,7 @@ const insertItem = async (TABLE_NAME, itemObject) => {
 
 const getUserMessage = async(senderId, receiverId)=> {
 	const params = {
-		TableName: 'chat',
+		TableName: 'chat_dev',
 		FilterExpression:
 		  "(senderId = :sender AND receiverId = :receiver) OR (senderId = :receiver AND receiverId = :sender)",
 		ExpressionAttributeValues: {
@@ -209,56 +209,112 @@ const getConditionalRecords = async(params) => {
 	}
   }
 
-const getAdminMessage = async(adminId)=> {
-  // Check if user is an admin
-  const adminCheckParams = {
-    TableName: 'admin',
-    Key: { id: adminId },
-  };
+// const getAdminMessage = async(adminId)=> {
+//   // Check if user is an admin
+//   const adminCheckParams = {
+//     TableName: 'admin',
+//     Key: { id: adminId },
+//   };
 
-  try {
-    const adminData = await DocumentClient.get(adminCheckParams).promise();
-    if (!adminData.Item || !adminData.Item.role =='admin') {
-      return {data:"Access denied ! . only admin can access"};
-    }
+//   try {
+//     const adminData = await DocumentClient.get(adminCheckParams).promise();
+//     if (!adminData.Item || !adminData.Item.role =='admin') {
+//       return {data:"Access denied ! . only admin can access"};
+//     }
 
-    // Find all unique users admin has chatted with
-    const chatUsersParams = {
-      TableName: 'chat',
-      FilterExpression: "senderId = :admin OR receiverId = :admin",
-      ExpressionAttributeValues: { ":admin": adminId },
-    };
+//     // Find all unique users admin has chatted with
+//     const chatUsersParams = {
+//       TableName: 'chat',
+//       FilterExpression: "senderId = :admin OR receiverId = :admin",
+//       ExpressionAttributeValues: { ":admin": adminId },
+//     };
 
-    const chatData = await DocumentClient.scan(chatUsersParams).promise();
-    const uniqueUserIds = [
-      ...new Set(chatData.Items.map((msg) => (msg.senderId === adminId ? msg.receiverId : msg.senderId))),
-    ];
+//     const chatData = await DocumentClient.scan(chatUsersParams).promise();
+//     const uniqueUserIds = [
+//       ...new Set(chatData.Items.map((msg) => (msg.senderId === adminId ? msg.receiverId : msg.senderId))),
+//     ];
 
-    // Fetch user details
-    const userDetails = await Promise.all(
-      uniqueUserIds.map(async (userId) => {
-        const userParams = { TableName: 'users', Key: { id:userId } };
-        const userData = await DocumentClient.get(userParams).promise();
-        return userData.Item;
-      })
-    );
-	const result = userDetails;
+//     // Fetch user details
+//     const userDetails = await Promise.all(
+//       uniqueUserIds.map(async (userId) => {
+//         const userParams = { TableName: 'users', Key: { id:userId } };
+//         const userData = await DocumentClient.get(userParams).promise();
+//         return userData.Item;
+//       })
+//     );
+// 	const result = userDetails;
 
-	const sortedItems = result.length>0? 
-	result.sort((a, b) => new Date(b.updatedDate) - new Date(a.updatedDate)):[]
-  return {data:sortedItems}
-} catch (error) {
-	return {data:error}
-   // res.status(500).json({ error: error.message });
-  }
-}
+// 	const sortedItems = result.length>0? 
+// 	result.sort((a, b) => new Date(b.updatedDate) - new Date(a.updatedDate)):[]
+//   return {data:sortedItems}
+// } catch (error) {
+// 	return {data:error}
+//    // res.status(500).json({ error: error.message });
+//   }
+// }
+
+
+const getAdminMessage = async (adminId) => {
+	// Check if user is an admin
+	const adminCheckParams = {
+	  TableName: 'admin_dev',
+	  Key: { id: adminId },
+	};
+	 
+	try {
+	  const adminData = await DocumentClient.get(adminCheckParams).promise();
+	  if (!adminData.Item || adminData.Item.role !== 'admin') {
+	 return { data: "Access denied! Only admin can access" };
+	  }
+	 
+	  // Find all unique users admin has chatted with
+	  const chatUsersParams = {
+	 TableName: 'chat_dev',
+	 FilterExpression: "senderId = :admin OR receiverId = :admin",
+	 ExpressionAttributeValues: { ":admin": adminId },
+	  };
+	 
+	  const chatData = await DocumentClient.scan(chatUsersParams).promise();
+	  
+	  // Extract unique userIds and their latest message timestamp
+	  const userChatMap = {};
+	  if(chatData.Items.length>0)
+	  {
+	  chatData.Items.forEach((msg) => {
+	 const userId = msg.senderId === adminId ? msg.receiverId : msg.senderId;
+	 if (!userChatMap[userId] || new Date(msg.updatedDate) > new Date(userChatMap[userId])) {
+	   userChatMap[userId] = msg.updatedDate;
+	 }
+	  });
+	 
+	  // Fetch user details
+	  const userDetails = await Promise.all(
+	 Object.keys(userChatMap).map(async (userId) => {
+	   const userParams = { TableName: 'users_dev', Key: { id: userId } };
+	   const userData = await DocumentClient.get(userParams).promise();
+	   return { ...userData.Item, lastChatTime: userChatMap[userId] };
+	 })
+	  );
+	 
+	  // Sort users by last chat timestamp (ascending order)
+	  const sortedItems = userDetails.sort((a, b) => new Date(b.lastChatTime) - new Date(a.lastChatTime));
+	 
+	  return { data: sortedItems };
+	}
+	  return { data: [] };
+	} catch (error) {
+	  return { data: error.message };
+	}
+};
+
+
 
 const getUsersMessage = async(userId)=> {
 	try {
   
 	  // Find all unique users admin has chatted with
 	  const chatUsersParams = {
-		TableName: 'chat',
+		TableName: 'chat_dev',
 		FilterExpression: "senderId = :admin OR receiverId = :admin",
 		ExpressionAttributeValues: { ":admin": userId },
 	  };
@@ -272,7 +328,7 @@ const getUsersMessage = async(userId)=> {
 	  // Fetch user details
 	  const userDetails = await Promise.all(
 		uniqueUserIds.map(async (userId) => {
-		  const userParams = { TableName: 'admin', Key: { id:userId } };
+		  const userParams = { TableName: 'admin_dev', Key: { id:userId } };
 		  const userData = await DocumentClient.get(userParams).promise();
 		  return userData.Item;
 		})
@@ -351,7 +407,7 @@ const batchInsertLargeDataset=async(districts) =>{
 	}
   }
 const renameColumn = async(oldName, newName) => {
-	const tableName = 'users'
+	const tableName = 'users_dev'
 	try {
 	  // Step 1: Scan all items
 	  const scanParams = { TableName: tableName };

@@ -79,7 +79,7 @@ router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 	const body = req.body;
 	try {
 		const findNews = await getSingleItemById(TABLE_NAME, id)
-		const userDetails = await getSingleItemById('users', req.user.id);
+		const userDetails = await getSingleItemById('users_dev', req.user.id);
 		console.log('findNews',findNews,userDetails);
 		let userName = ''
 		let userImage = ''
