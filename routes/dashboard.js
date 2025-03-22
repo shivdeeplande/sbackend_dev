@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
 		const formattedDateAfter = sevenDaysAfter.toISOString().split("T")[0];
 
 		const bannerParams = {
-			TableName: 'banner',
+			TableName: 'banner_dev',
 			FilterExpression: "isActive = :boolTrue OR isActive = :stringTrue",
 			ExpressionAttributeValues: {
 			  ":boolTrue":1,      // Boolean true
@@ -36,7 +36,7 @@ router.get('/', async (req, res) => {
 		const itemsBanner = totalbanner//await getAllItems('banner');
 		
 		const eventsParams = {
-			TableName: 'events',
+			TableName: 'events_dev',
 			FilterExpression: "toggle = :boolTrue OR toggle = :stringTrue",
 			ExpressionAttributeValues: {
 			  ":boolTrue": 1,      // Boolean true
@@ -46,7 +46,7 @@ router.get('/', async (req, res) => {
 		const totalevents = await getConditionalRecords(eventsParams);
 		const itemsEvents = totalevents//await getAllItems('events');
 		const userParams = {
-			TableName: 'users',
+			TableName: 'users_dev',
 			FilterExpression: "isMember = :boolTrue OR isMember = :stringTrue",
 			ExpressionAttributeValues: {
 			  ":boolTrue": true,      // Boolean true
@@ -56,7 +56,7 @@ router.get('/', async (req, res) => {
 		const totalUser = await getConditionalRecords(userParams);
 			
 		const newsParams = {
-		TableName: 'news',
+		TableName: 'news_dev',
 		FilterExpression: "updatedDate >= :sevenDaysAgo AND (isVisible= :isVisibleString OR isVisible= :isVisibleBool)",
 		ExpressionAttributeValues: {
 			":sevenDaysAgo": formattedDate,

@@ -149,6 +149,7 @@ const EXCLUDED_FIELDS = new Set([
     "fcmToken",
     "uri",
     "image",
+    "isMember",
     "createDate",
     "updatedDate"
 ]);
