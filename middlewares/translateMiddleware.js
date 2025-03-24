@@ -150,6 +150,7 @@ const EXCLUDED_FIELDS = new Set([
     "uri",
     "image",
     "isMember",
+    "dateOfJoining",
     "createDate",
     "updatedDate"
 ]);

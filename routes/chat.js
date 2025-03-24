@@ -36,9 +36,9 @@ const { getAllItems, batchInsertLargeDataset,
 router.post("/send",verifyToken, upload.fields([{ name: "image" }, { name: "video" },{ name: "document" }]), async (req, res) => {
 	const body = req.body;
 	try {
-		if(!body.senderId){
+		if(!body.senderId){  //senderId is basically user id
 			res.errors({message:'senderId Required'})
-		}else if(!body.receiverId){
+		}else if(!body.receiverId){ //receiverId is basically admin id
 			res.errors({message:'receiverId Required'})
 		}else{
 			

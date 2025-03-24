@@ -564,7 +564,7 @@ router.put(
             newKey,
             contentType
           );
-          console.log(result);
+          // console.log(result);
           image = result.Location;
         }
         const itemObject = {
