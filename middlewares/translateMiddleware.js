@@ -151,6 +151,7 @@ const EXCLUDED_FIELDS = new Set([
     "image",
     "isMember",
     "dateOfJoining",
+    "isSocialLogin",
     "createDate",
     "updatedDate"
 ]);
