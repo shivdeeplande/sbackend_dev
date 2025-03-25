@@ -12,7 +12,7 @@ const { getAllItems, generateRandomString, getLastValue,generateAuthToken,upload
 router.get('/', async (req, res) => {
 	try {
 		const items = await getAllItems(TABLE_NAME);
-		const restrictedNews  = items.Items.length>0? items.Items.filter(val=> val.isVisible=='true'):[]
+		const restrictedNews  = items.Items.length>0? items.Items.filter(val=> val.isVisible == true):[]
 		res.success({data:restrictedNews})
 	} catch (err) {
 		res.errors({message:'Something went wrong'})
