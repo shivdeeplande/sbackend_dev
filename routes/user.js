@@ -532,6 +532,10 @@ router.put(
     const id = req.params.id;
     const body = req.body;
     try {
+      if (!body.constituency) {
+        res.errors({ message: "Constituency Required" });
+      }
+      
       const findUser = await getSingleItemById(TABLE_NAME, id);
       console.log("findUser", findUser, req.file);
       if (findUser.Item) {
@@ -568,18 +572,22 @@ router.put(
           image = result.Location;
         }
         const itemObject = {
-          fullName: body.fullName || data.fullName,
-          userrole: body.userrole || data.userrole,
-          email: body.email || data.email,
-          mobile: body.mobile || data.mobile,
-          gender: body.gender || data.gender,
-          dob: body.dob || data.dob,
-          district: body.district || data.district,
-          state: body.state || data.state,
-          dateOfJoining: dateOfJoining,
-          image: image,
-          isMember: isMember,
-          updatedDate: new Date().toISOString(),
+          fullName:body.fullName || data.fullName,
+          userrole:body.userrole || data.userrole,
+          fatherOrHusbandName:body.fatherOrHusbandName || "",
+          email:body.email || data.email,
+          mobile:body.mobile || data.mobile,
+          gender:body.gender || data.gender,
+          dob:body.dob || data.dob,
+          voterIdNo: body.voterIdNo || "",
+          constituency: body.constituency,
+          address: body.address || "",
+          district:body.district || data.district,
+          state:body.state || data.state,
+          dateOfJoining:dateOfJoining,
+          image:image,
+          isMember:isMember,
+          updatedDate:new Date().toISOString()
         };
         const updatedUser = await updateItem(TABLE_NAME, data.id, itemObject);
         res.success({ data: updatedUser });

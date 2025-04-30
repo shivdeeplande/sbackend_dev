@@ -29,50 +29,111 @@ router.get('/:id', async (req, res) => {
 	}
 });
 
-router.post('/', verifyToken, upload.single("file"), async (req, res) => {
-	const body = req.body;	
-	try {
-		if(!req.file){
-			res.errors({message:'file Required'})
-		}else if(!body.title){
-			res.errors({message:'title Required'})
-		}else if(!body.description){
-			res.errors({message:'description Required'})
-		}else{
-			body.id = uuidv4();		
-			const bucketName = process.env.AWS_S3_BUCKET_NAME;
-			const fileContent = req.file.buffer; // File content from Multer
-			const newKey = `${Date.now()}_${req.file.originalname}`; // Unique filename
-			const contentType = req.file.mimetype;
-			// Upload to S3
-			const result = await uploadFileToS3(fileContent, bucketName, newKey, contentType);
-			console.log(result);
-			let image= result.Location				
+// router.post('/', verifyToken, upload.array("file", 10), async (req, res) => {
+// 	const body = req.body;	
+// 	console.log('files', req.files);
+// 	try {
+// 		if(!req.file){
+// 			res.errors({message:'file Required'})
+// 		}
+// 		if(!body.title){
+// 			res.errors({message:'title Required'})
+// 		}else if(!body.description){
+// 			res.errors({message:'description Required'})
+// 		}else{
+// 			body.id = uuidv4();		
+// 			const bucketName = process.env.AWS_S3_BUCKET_NAME;
+// 			const fileContent = req.file.buffer; // File content from Multer
+// 			const newKey = `${Date.now()}_${req.file.originalname}`; // Unique filename
+// 			const contentType = req.file.mimetype;
+// 			// Upload to S3
+// 			const result = await uploadFileToS3(fileContent, bucketName, newKey, contentType);
+// 			console.log(result);
+// 			let image= result.Location				
 			
-			const item = {
-				id:body.id,
-				image:image,
-				title:body.title,
-				isVisible:false,
-				toggle:body.toggle || "0",
-				newsDate:body.newsDate,
-				description:body.description,
-				like:[],
-				comment:[],
-				share:[],
-				createDate:new Date().toISOString(),
-				updatedDate:new Date().toISOString()
-			}
-			console.log('item',item);
+// 			const item = {
+// 				id:body.id,
+// 				image:image,
+// 				title:body.title,
+// 				isVisible:false,
+// 				toggle:body.toggle || "0",
+// 				newsDate:body.newsDate,
+// 				description:body.description,
+// 				like:[],
+// 				comment:[],
+// 				share:[],
+// 				createDate:new Date().toISOString(),
+// 				updatedDate:new Date().toISOString()
+// 			}
+// 			console.log('item',item);
 			
-			const newItem = await insertItem(TABLE_NAME, item);
-			console.log('newItem', newItem);
-			res.success({data:item, message:"News added successfuly"})
-		}
-	} catch (err) {
-		res.errors({message:'Something went wrong',data:err})
-	}
+// 			const newItem = await insertItem(TABLE_NAME, item);
+// 			console.log('newItem', newItem);
+// 			res.success({data:item, message:"News added successfuly"})
+// 		}
+// 	} catch (err) {
+// 		res.errors({message:'Something went wrong',data:err})
+// 	}
+// });
+
+
+router.post('/', verifyToken, upload.array('file', 10), async (req, res) => {
+  const body = req.body;
+
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: 'File(s) Required' });
+    }
+    if (!body.title) {
+      return res.status(400).json({ message: 'Title Required' });
+    }
+    if (!body.description) {
+      return res.status(400).json({ message: 'Description Required' });
+    }
+
+    // Upload all files to S3
+    const uploadResults = await Promise.all(
+      req.files.map(async (file) => {
+        const bucketName = process.env.AWS_S3_BUCKET_NAME;
+        const fileContent = file.buffer;
+        const newKey = `${Date.now()}_${file.originalname}`; // Correct file reference
+        const contentType = file.mimetype;
+
+        const result = await uploadFileToS3(fileContent, bucketName, newKey, contentType);
+        return result.Location; // return the S3 file URL
+      })
+    );
+
+    const itemId = uuidv4();
+
+    const item = {
+      id: itemId,
+      images: uploadResults, // Array of uploaded image URLs
+      title: body.title,
+      isVisible: false,
+      toggle: body.toggle || "0",
+      newsDate: body.newsDate,
+      description: body.description,
+      like: [],
+      comment: [],
+      share: [],
+      createDate: new Date().toISOString(),
+      updatedDate: new Date().toISOString(),
+    };
+
+    const newItem = await insertItem(TABLE_NAME, item);
+
+    console.log('New Item:', newItem);
+
+    res.status(200).json({ data: item, message: 'News added successfully' });
+
+  } catch (err) {
+    console.error('Upload Error:', err);
+    res.status(500).json({ message: 'Something went wrong', data: err });
+  }
 });
+
+
 
 router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 	const id = req.params.id;
