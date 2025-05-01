@@ -81,8 +81,8 @@ router.post('/', verifyToken, upload.single('file'), async (req, res) => {
   const body = req.body;
 
   try {
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ message: 'File(s) Required' });
+    if (!req.file || req.file.length === 0) {
+      return res.status(400).json({ message: 'File Required' });
     }
     if (!body.title) {
       return res.status(400).json({ message: 'Title Required' });
