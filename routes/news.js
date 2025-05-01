@@ -12,7 +12,7 @@ const { getAllItems, generateRandomString, getLastValue,generateAuthToken,upload
 router.get('/', async (req, res) => {
 	try {
 		const items = await getAllItems(TABLE_NAME);
-		const restrictedNews  = items.Items.length>0? items.Items.filter(val=> val.isVisible == true):[]
+		const restrictedNews  = items.Items.length>0? items.Items.filter(val=> val.isVisible === true || val.isVisible === "true"):[];
 		res.success({data:restrictedNews})
 	} catch (err) {
 		res.errors({message:'Something went wrong'})
@@ -77,7 +77,7 @@ router.get('/:id', async (req, res) => {
 // });
 
 
-router.post('/', verifyToken, upload.array('file', 10), async (req, res) => {
+router.post('/', verifyToken, upload.single('file'), async (req, res) => {
   const body = req.body;
 
   try {
@@ -98,7 +98,6 @@ router.post('/', verifyToken, upload.array('file', 10), async (req, res) => {
         const fileContent = file.buffer;
         const newKey = `${Date.now()}_${file.originalname}`; // Correct file reference
         const contentType = file.mimetype;
-
         const result = await uploadFileToS3(fileContent, bucketName, newKey, contentType);
         return result.Location; // return the S3 file URL
       })
@@ -135,7 +134,7 @@ router.post('/', verifyToken, upload.array('file', 10), async (req, res) => {
 
 
 
-router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
+router.put('/:id',verifyToken, upload.single('file'),  async (req, res) => {
 	const id = req.params.id;
 	const body = req.body;
 	try {
@@ -181,11 +180,13 @@ router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 			if(body.share){
 				share = data.share.includes(req.user.id)?[...data.share]:[...data.share, req.user.id]
 			}
-			const toggle= (body.toggle==1 || body.toggle==0)?body.toggle:data.toggle
+			const toggle= (body.toggle==1 || body.toggle==0)?body.toggle:data.toggle;
+			const isVisible= (body.isVisible == true || body.isVisible == false)?body.isVisible:data.isVisible;
 			const itemObject = {
 				image:image,
 				title:body.title || data.title,
 				toggle:toggle,
+				isVisible:isVisible,
 				newsDate:body.newsDate || data.newsDate,
 				description:body.description || data.description,
 				like:like,
