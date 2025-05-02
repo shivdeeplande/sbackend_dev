@@ -532,10 +532,6 @@ router.put(
     const id = req.params.id;
     const body = req.body;
     try {
-      if (!body.constituency) {
-        res.errors({ message: "Constituency Required" });
-      }
-      
       const findUser = await getSingleItemById(TABLE_NAME, id);
       console.log("findUser", findUser, req.file);
       if (findUser.Item) {
@@ -580,7 +576,7 @@ router.put(
           gender:body.gender || data.gender,
           dob:body.dob || data.dob,
           voterIdNo: body.voterIdNo || "",
-          constituency: body.constituency,
+          constituency: body.constituency || "",
           address: body.address || "",
           district:body.district || data.district,
           state:body.state || data.state,
