@@ -91,6 +91,7 @@ router.post("/send",verifyToken, upload.fields([{ name: "image" }, { name: "vide
 				sent: true,
 				received: true,
 				pending: false,
+				isRead: false,
 				createDate:new Date().toISOString(),
 				updatedDate:new Date().toISOString()
 			}
@@ -112,6 +113,7 @@ router.post("/send",verifyToken, upload.fields([{ name: "image" }, { name: "vide
 				item.senderId  = body.receiverId
 				item.receiverId  = body.senderId
 				item.text  = "Thanks for reaching out! We appreciate your message and will get back to you as soon as possible. If it's urgent, please let me know. Have a great day!"
+				item.isRead = true,
 				item.createDate =new Date().toISOString(),
 				item.updatedDate =new Date().toISOString()
 				await insertItem(TABLE_NAME, item);
@@ -122,6 +124,39 @@ router.post("/send",verifyToken, upload.fields([{ name: "image" }, { name: "vide
 		res.errors({message:'Something went wrong',data:err})
 	}
 });
+
+
+//Update chat message read status
+router.post("/update-read-status", verifyToken, async (req, res) => {
+	const { messageId, isRead } = req.body;
+	try {
+	  if (typeof isRead !== "boolean") {
+		return res.errors({ message: "isRead should be a boolean value (true/false)" });
+	  }
+  
+	  // Check if the message exists
+	  const message = await getSingleItemById(TABLE_NAME, messageId);
+  
+	  if (!message || !message.Item) {
+		return res.errors({ message: "Message not found" });
+	  }
+  
+	  const itemObject = {
+		isRead: isRead,
+	  };
+  
+	  //updateItem utility function to update the message
+	  const updatedMessage = await updateItem(TABLE_NAME, messageId, itemObject);
+  
+	  // Send response
+	  res.success({ data: updatedMessage, message: "Message read status updated successfully" });
+  
+	} catch (err) {
+	  console.error("Error while updating read status:", err);
+	  res.errors({ message: "Something went wrong while updating the read status", data: err });
+	}
+});
+  
 
 
 /**
