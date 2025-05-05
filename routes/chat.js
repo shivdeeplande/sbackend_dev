@@ -158,6 +158,39 @@ router.post("/update-read-status", verifyToken, async (req, res) => {
 });
   
 
+//Get unread message count
+router.post("/unread-counts", verifyToken, async (req, res) => {
+	const USER_TABLE_NAME = 'users_dev'
+	const { adminId } = req.body;
+	try {
+	  const users = await getAllItems(USER_TABLE_NAME);
+
+	  console.log('users',users);
+  
+	  const unreadCounts = await Promise.all(users.Items.map(async (user) => {
+		const params = {
+		  TableName: TABLE_NAME,
+		  FilterExpression: "senderId = :senderId AND receiverId = :receiverId AND isRead = :isRead",
+		  ExpressionAttributeValues: {
+			":senderId": user.id,
+			":receiverId": adminId,
+			":isRead": false,
+		  },
+		};
+		const messages = await getConditionalRecords(params);
+		return {
+		  userId: user.id,
+		  unreadCount: messages.length,
+		};
+	  }));
+  
+	  res.success({ data: unreadCounts, message: "Unread counts fetched successfully" });
+	} catch (err) {
+	  console.error("Error fetching unread counts:", err);
+	  res.errors({ message: "Failed to fetch unread counts", data: err });
+	}
+  });  
+
 
 /**
  * ✅ Fetch chat messages between two users
