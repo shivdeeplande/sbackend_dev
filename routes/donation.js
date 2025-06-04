@@ -94,7 +94,7 @@ router.post("/webhook", async (req, res) => {
     const payment = body.payload.payment.entity;
     const donationId = payment.notes?.donationId || payment.receipt;
 
-    console.log("Payment received:", payment);
+    // console.log("Payment received:", payment);
 
     const updateParams = {
       TableName: TABLE_NAME,
@@ -132,7 +132,6 @@ router.post("/webhook", async (req, res) => {
       },
     };
 
-    console.log("Updating donation record:", updateParams);
 
     const responseItem = {
         donationId,
@@ -162,6 +161,27 @@ router.get("/donations", verifyToken, async (req, res) => {
   } catch (err) {
     console.error("Get donations error:", err);
     res.errors({ message: "Unable to fetch donations" });
+  }
+});
+
+// GET DONATION BY ID (Admin/Logged-in Users)
+router.get("/:donationId", verifyToken, async (req, res) => {
+  const { donationId } = req.params;
+  try {
+    const params = {
+      TableName: TABLE_NAME,
+      Key: { 
+        donationId 
+      },
+    }
+    const item = await DocumentClient.get(params).promise();
+    if (!item) {
+      return res.status(404).json({ message: "Donation not found" });
+    }
+    res.success({message: "Donation fetched successfully", data: item });
+  } catch (err) {
+    // console.error("Get donation by ID error:", err);
+    res.errors({ message: "Unable to fetch donation" });
   }
 });
 
