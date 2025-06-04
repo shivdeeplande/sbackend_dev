@@ -128,34 +128,51 @@ router.post("/send",verifyToken, upload.fields([{ name: "image" }, { name: "vide
 
 //Update chat message read status
 router.post("/update-read-status", verifyToken, async (req, res) => {
-	const { messageId, isRead } = req.body;
+	const { senderId, isRead } = req.body;
+  
 	try {
 	  if (typeof isRead !== "boolean") {
-		return res.errors({ message: "isRead should be a boolean value (true/false)" });
+		return res.status(400).json({ message: "isRead should be a boolean value (true/false)" });
 	  }
   
-	  // Check if the message exists
-	  const message = await getSingleItemById(TABLE_NAME, messageId);
+	  if (!senderId) {
+		return res.status(400).json({ message: "senderId is required" });
+	  }
+
+	  const indexName = "senderIdIndex"
+			const keyConditionExpression = "senderId = :senderId"
+			const expressionAttributeValues = {
+				":senderId": senderId
+			}
   
-	  if (!message || !message.Item) {
-		return res.errors({ message: "Message not found" });
+	  // Fetch all messages by senderId
+	  const messages = await getMultipleItemsByQuery(TABLE_NAME, indexName, keyConditionExpression, expressionAttributeValues);
+
+  
+	  if (!messages || messages.Items.length === 0) {
+		return res.status(404).json({ message: "No messages found for the given senderId" });
 	  }
   
-	  const itemObject = {
-		isRead: isRead,
-	  };
+	  // Update each message
+	  const updatedMessages = [];
+	  for (const message of messages.Items) {
+		const updated = await updateItem(TABLE_NAME, message.id, { isRead });
+		updatedMessages.push(updated);
+	  }
   
-	  //updateItem utility function to update the message
-	  const updatedMessage = await updateItem(TABLE_NAME, messageId, itemObject);
-  
-	  // Send response
-	  res.success({ data: updatedMessage, message: "Message read status updated successfully" });
+	  res.status(200).json({
+		message: "Messages read status updated successfully",
+		data: updatedMessages,
+	  });
   
 	} catch (err) {
 	  console.error("Error while updating read status:", err);
-	  res.errors({ message: "Something went wrong while updating the read status", data: err });
+	  res.status(500).json({
+		message: "Something went wrong while updating the read status",
+		error: err.message || err,
+	  });
 	}
-});
+  });  
   
 
 //Get unread message count
@@ -165,7 +182,6 @@ router.post("/unread-counts", verifyToken, async (req, res) => {
 	try {
 	  const users = await getAllItems(USER_TABLE_NAME);
 
-	  console.log('users',users);
   
 	  const unreadCounts = await Promise.all(users.Items.map(async (user) => {
 		const params = {

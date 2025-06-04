@@ -24,6 +24,7 @@ const dashboardRoute = require("./routes/dashboard");
 const chatRoute = require("./routes/chat");
 const notificationRoute = require("./routes/notification");
 const staticRoute = require("./routes/staticRouter");
+const donationRoute = require("./routes/donation");
 
 const app = express();
 const PORT = process.env.PORT || 8002;
@@ -57,6 +58,7 @@ app.set("views", path.resolve("./views"));
 
 app.use(express.urlencoded({ extended: false }));
 
+
 app.use("/", staticRoute);
 app.use("/api/v1", userRoute);
 app.use("/api/v1/admin", adminRoute);
@@ -73,10 +75,11 @@ app.use("/api/v1/banner", bannerRoute);
 app.use("/api/v1/dashboard", dashboardRoute);
 app.use("/api/v1/chat", chatRoute);
 app.use("/api/v1/notification", notificationRoute);
+app.use("/api/v1/donation", donationRoute);
 
-// app.listen(PORT, () => console.log(`Server Started at PORT:${PORT}`));
+app.listen(PORT, () => console.log(`Server Started at PORT:${PORT}`));
 // Create HTTPS Server
-const server = https.createServer(options, app)
-server.listen(PORT, () => {
-    console.log(`🚀 HTTPS Server running at https://localhost:${PORT}`);
-  });
+// const server = https.createServer(options, app)
+// server.listen(PORT, () => {
+//     console.log(`🚀 HTTPS Server running at https://localhost:${PORT}`);
+//   });
