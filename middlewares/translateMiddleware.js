@@ -1,145 +1,245 @@
-// require('dotenv').config();
+// require("dotenv").config();
 // const AWS = require("aws-sdk");
 
 // // Configure AWS Translate
 // const translate = new AWS.Translate({ region: process.env.AWS_DEFAULT_REGION });
 
-// // Fields that should NOT be translated
+
+// const PHRASES_TO_STANDARDIZE = [
+//     { variants: ["हिंद सेना", "हिन्द सेना"], replacement: "Hind Sena" },
+//   ];
+  
+//   function maskPhrases(text, targetLang) {
+//     if (targetLang !== "en") return text;
+  
+//     let masked = text;
+//     PHRASES_TO_STANDARDIZE.forEach(({ variants, replacement }) => {
+//       variants.forEach((variant) => {
+//         masked = masked.replaceAll(variant, replacement);
+//       });
+//     });
+//     return masked;
+//   }
+  
+//   function unmaskPhrases(text) {
+//     return text;
+//   }
+  
+
 // const EXCLUDED_FIELDS = new Set([
-//     "token",
-//     "fcmToken",
-//     "uri",
-//     "image",
-//     "isMember",
-//     "dateOfJoining",
-//     "isSocialLogin",
-//     "createDate",
-//     "updatedDate"
+//   "token",
+//   "fcmToken",
+//   "uri",
+//   "image",
+//   "isMember",
+//   "dateOfJoining",
+//   "isSocialLogin",
+//   "createDate",
+//   "updatedDate",
 // ]);
 
-// const translationCache = new Map(); // In-memory cache for translations
+// const translationCache = new Map();
+// const MAX_CACHE_SIZE = 1000;
 
-// // Function to detect language without translating
+// function safeCacheSet(key, value) {
+//   if (translationCache.size >= MAX_CACHE_SIZE) {
+//     const oldestKey = translationCache.keys().next().value;
+//     translationCache.delete(oldestKey);
+//   }
+//   translationCache.set(key, value);
+// }
+
 // function detectLanguage(text) {
-//     return /[\u0900-\u097F]/.test(text) ? "hi" : "en";
+//   return /[\u0900-\u097F]/.test(text) ? "hi" : "en";
 // }
 
-// // Function to translate text (if needed)
-// async function batchTranslate(textArray, targetLang) {
-//     if (!textArray.length) return textArray; // Skip if empty array
+// const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
-//     const uniqueTexts = [...new Set(textArray)]; // Remove duplicates
-//     const translationMap = {}; // Store translations
-//     const textsToTranslate = [];
+// function splitLongText(text, maxBytes) {
+//   const parts = [];
+//   let part = "",
+//     size = 0;
 
-//     for (const text of uniqueTexts) {
-//         if (!text.trim()) {
-//             translationMap[text] = text; // Skip empty strings
-//         } else if (translationCache.has(text + targetLang)) {
-//             translationMap[text] = translationCache.get(text + targetLang);
-//         } else if (detectLanguage(text) !== targetLang) {
-//             textsToTranslate.push(text);
-//         } else {
-//             translationMap[text] = text; // Already correct language
-//         }
+//   for (const word of text.split(" ")) {
+//     const wordSize = Buffer.byteLength(word + " ", "utf-8");
+//     if (size + wordSize > maxBytes) {
+//       parts.push(part.trim());
+//       part = word + " ";
+//       size = wordSize;
+//     } else {
+//       part += word + " ";
+//       size += wordSize;
 //     }
+//   }
+//   if (part.trim()) parts.push(part.trim());
+//   return parts;
+// }
 
-//     if (textsToTranslate.length > 0) {
+// async function limitedBatch(items, limit, asyncFn) {
+//   const results = [];
+//   let idx = 0;
+//   async function run() {
+//     while (idx < items.length) {
+//       const i = idx++;
+//       results[i] = await asyncFn(items[i]);
+//     }
+//   }
+//   await Promise.all(Array(limit).fill(0).map(run));
+//   return results;
+// }
+
+// async function batchTranslate(texts, targetLang) {
+//   if (!texts.length) return texts;
+
+//   const translationMap = {};
+//   const textsToTranslate = [];
+//   const originalToMasked = new Map();
+//   const maskedToOriginal = new Map();
+//   const uniqueTexts = [...new Set(texts)];
+
+//   for (const text of uniqueTexts) {
+//     if (!text.trim()) {
+//       translationMap[text] = text;
+//     } else if (translationCache.has(text + targetLang)) {
+//       translationMap[text] = translationCache.get(text + targetLang);
+//     } else if (detectLanguage(text) !== targetLang) {
+//       const byteSize = Buffer.byteLength(text, "utf-8");
+//       if (byteSize > 8000) {
+//         console.warn("Large text detected for translation:", byteSize);
+//         splitLongText(text, 7500).forEach((part) => {
+//           const masked = maskPhrases(part, targetLang);
+//           originalToMasked.set(part, masked);
+//           maskedToOriginal.set(masked, part);
+//           textsToTranslate.push(masked);
+//         });
+//       } else {
+//         const masked = maskPhrases(text, targetLang);
+//         originalToMasked.set(text, masked);
+//         maskedToOriginal.set(masked, text);
+//         textsToTranslate.push(masked);
+//       }
+//     } else {
+//       translationMap[text] = text;
+//     }
+//   }
+
+//   const maxBytesPerBatch = 8500;
+//   const batches = [];
+//   let currentBatch = [],
+//     currentSize = 0;
+
+//   for (const text of textsToTranslate) {
+//     const textSize = Buffer.byteLength(text, "utf-8");
+//     if (currentSize + textSize > maxBytesPerBatch) {
+//       batches.push(currentBatch);
+//       currentBatch = [];
+//       currentSize = 0;
+//     }
+//     currentBatch.push(text);
+//     currentSize += textSize;
+//   }
+//   if (currentBatch.length) batches.push(currentBatch);
+
+//   try {
+//     await limitedBatch(batches, 3, async (batch) => {
+//       const joined = batch.join("\n----\n");
+//       const params = {
+//         Text: joined,
+//         SourceLanguageCode: detectLanguage(batch[0]),
+//         TargetLanguageCode: targetLang,
+//       };
+
+//       let response;
+//       for (let retries = 3; retries > 0; retries--) {
 //         try {
-//             const translationPromises = textsToTranslate.map(async (text) => {
-//                 const params = {
-//                     Text: text,
-//                     SourceLanguageCode: detectLanguage(text),
-//                     TargetLanguageCode: targetLang
-//                 };
-//                 const result = await translate.translateText(params).promise();
-//                 translationMap[text] = result.TranslatedText;
-//                 translationCache.set(text + targetLang, result.TranslatedText);
-//                 return result.TranslatedText;
-//             });
-
-//             const translatedResults = await Promise.all(translationPromises);
-
-//             textsToTranslate.forEach((text, index) => {
-//                 translationMap[text] = translatedResults[index];
-//             });
-//         } catch (error) {
-//             console.error("Translation Error:", error);
-//             return textArray; // Return original if translation fails
+//           response = await translate.translateText(params).promise();
+//           break;
+//         } catch (err) {
+//           console.warn(`Retrying translation batch (${4 - retries})...`);
+//           if (retries === 1) throw err;
+//           await sleep(1000);
 //         }
-//     }
+//       }
 
-//     return textArray.map(text => translationMap[text] || text);
+//       const translatedParts = response.TranslatedText.split("\n----\n");
+//       batch.forEach((maskedText, i) => {
+//         const originalText = maskedToOriginal.get(maskedText) || maskedText;
+//         const translated = unmaskPhrases(translatedParts[i] || maskedText);
+//         translationMap[originalText] = translated;
+//         safeCacheSet(originalText + targetLang, translated);
+//       });
+//     });
+//   } catch (error) {
+//     console.error("Translation batch failed:", error);
+//     return texts;
+//   }
+
+//   return texts.map((t) => translationMap[t] || t);
 // }
 
-// // Extract text fields from JSON while preserving structure
 // function extractStrings(obj) {
-//     const texts = [];
-//     const paths = [];
-
-//     function traverse(o, path = []) {
-//         if (typeof o === "string") {
-//             texts.push(o);
-//             paths.push([...path]);
-//         } else if (Array.isArray(o)) {
-//             o.forEach((item, index) => traverse(item, [...path, index]));
-//         } else if (typeof o === "object" && o !== null) {
-//             Object.entries(o).forEach(([key, value]) => {
-//                 if (!EXCLUDED_FIELDS.has(key)) traverse(value, [...path, key]);
-//             });
-//         }
+//   const texts = [],
+//     paths = [];
+//   function traverse(o, path = []) {
+//     if (typeof o === "string") {
+//       texts.push(o);
+//       paths.push(path);
+//     } else if (Array.isArray(o)) {
+//       o.forEach((v, i) => traverse(v, [...path, i]));
+//     } else if (o && typeof o === "object") {
+//       Object.entries(o).forEach(([k, v]) => {
+//         if (!EXCLUDED_FIELDS.has(k)) traverse(v, [...path, k]);
+//       });
 //     }
-
-//     traverse(obj);
-//     return { texts, paths };
+//   }
+//   traverse(obj);
+//   return { texts, paths };
 // }
 
-// // Replace translated text back into JSON
-// function replaceStrings(obj, translatedTexts, paths) {
-//     let index = 0;
-//     function traverse(o, path = []) {
-//         if (paths.length > index && JSON.stringify(path) === JSON.stringify(paths[index])) {
-//             return translatedTexts[index++];
-//         } else if (Array.isArray(o)) {
-//             return o.map((item, idx) => traverse(item, [...path, idx]));
-//         } else if (typeof o === "object" && o !== null) {
-//             return Object.fromEntries(
-//                 Object.entries(o).map(([key, value]) => [key, traverse(value, [...path, key])])
-//             );
-//         }
-//         return o;
+// function replaceStrings(obj, newTexts, paths) {
+//   let index = 0;
+//   function traverse(o, path = []) {
+//     if (JSON.stringify(path) === JSON.stringify(paths[index])) {
+//       return newTexts[index++];
+//     } else if (Array.isArray(o)) {
+//       return o.map((v, i) => traverse(v, [...path, i]));
+//     } else if (o && typeof o === "object") {
+//       return Object.fromEntries(
+//         Object.entries(o).map(([k, v]) => [k, traverse(v, [...path, k])])
+//       );
 //     }
-//     return traverse(obj);
+//     return o;
+//   }
+//   return traverse(obj);
 // }
 
-// // Middleware to detect language but NOT translate during creation
 // async function translateMiddleware(req, res, next) {
-//     const originalJson = res.json;
-//     const languageHeader = req.headers["accept-language"];
+//   const originalJson = res.json;
+//   const lang = req.headers["accept-language"];
 
-//     // 🔹 If language is NOT `hi` or `en`, just continue without translation
-//     if (!["hi", "en"].includes(languageHeader)) {
-//         return next();
+//   if (!["hi", "en"].includes(lang)) return next();
+
+//   res.json = async function (data) {
+//     try {
+//       const { texts, paths } = extractStrings(data);
+//       if (texts.length === 0) return originalJson.call(this, data);
+
+//       const translated = await batchTranslate(texts, lang);
+//       const newData = replaceStrings(data, translated, paths);
+
+//       return originalJson.call(this, newData);
+//     } catch (err) {
+//       console.error("Translation Middleware Error:", err);
+//       try {
+//         originalJson.call(this, data);
+//       } catch (fallbackError) {
+//         console.error("Fallback Response Error:", fallbackError);
+//         res.status(500).send({ error: "Translation failed" });
+//       }
 //     }
+//   };
 
-//     res.json = async function (data) {
-//         try {
-//             const targetLang = languageHeader; // Accept-Language header defines the language
-
-//             const { texts, paths } = extractStrings(data);
-//             if (texts.length === 0) return originalJson.call(this, data);
-
-//             const translatedTexts = await batchTranslate(texts, targetLang);
-//             const translatedData = replaceStrings(data, translatedTexts, paths);
-
-//             originalJson.call(this, translatedData);
-//         } catch (error) {
-//             console.error("Middleware Translation Error:", error);
-//             originalJson.call(this, data);
-//         }
-//     };
-
-//     next();
+//   next();
 // }
 
 // module.exports = translateMiddleware;
@@ -147,247 +247,262 @@
 
 
 
-require('dotenv').config();
+
+require("dotenv").config();
 const AWS = require("aws-sdk");
+const { LRUCache } = require("lru-cache");
+const Bottleneck = require("bottleneck");
 
 // Configure AWS Translate
 const translate = new AWS.Translate({ region: process.env.AWS_DEFAULT_REGION });
 
-// Fields that should NOT be translated
+// Bottleneck limiter — adjust minTime to fit AWS Translate rate limits
+const limiter = new Bottleneck({
+  maxConcurrent: 5,
+  minTime: 200, // ~5 requests/sec 
+});
+
+// 1. Phrase masking
+const PHRASES_TO_STANDARDIZE = [
+  { variants: ["हिंद सेना", "हिन्द सेना"], replacement: "Hind Sena" },
+];
+
+function maskPhrases(text, targetLang) {
+  if (targetLang !== "en") return text;
+  let masked = text;
+  for (const { variants, replacement } of PHRASES_TO_STANDARDIZE) {
+    for (const variant of variants) {
+      masked = masked.replaceAll(variant, replacement);
+    }
+  }
+  return masked;
+}
+
+function unmaskPhrases(text) {
+  return text; 
+}
+
+// 2. LRU Cache
+const translationCache = new LRUCache({
+  max: 1000,
+  ttl: 1000 * 60 * 60 * 12,
+});
+
+// 3. Helpers
+function detectLanguage(text) {
+  return /[\u0900-\u097F]/.test(text) ? "hi" : "en";
+}
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+
+// 4. Limited concurrency
+async function limitedBatch(items, limit, asyncFn) {
+  const results = [];
+  let idx = 0;
+  async function worker() {
+    while (idx < items.length) {
+      const i = idx++;
+      results[i] = await asyncFn(items[i]);
+    }
+  }
+  await Promise.all(
+    Array(limit)
+      .fill()
+      .map(() => worker())
+  );
+  return results;
+}
+
+// 5. Split long text
+function splitLongText(text, maxBytes) {
+  const parts = [];
+  let current = "",
+    currentSize = 0;
+  const sentences = text.split(/(?<=[।.!?])\s+/);
+  for (const sentence of sentences) {
+    const size = Buffer.byteLength(sentence, "utf-8");
+    if (currentSize + size > maxBytes) {
+      if (current.trim()) parts.push(current.trim());
+      current = sentence;
+      currentSize = size;
+    } else {
+      current += (current ? " " : "") + sentence;
+      currentSize += size;
+    }
+  }
+  if (current.trim()) parts.push(current.trim());
+  return parts;
+}
+
+// 6. Create safe batches
+function createBatches(texts, maxBatchBytes = 9500) {
+  const batches = [];
+  let batch = [],
+    batchSize = 0;
+  for (const text of texts) {
+    const textSize = Buffer.byteLength(text, "utf-8");
+    const sepSize = batch.length ? Buffer.byteLength("\n----\n", "utf-8") : 0;
+
+    if (textSize > maxBatchBytes) {
+      for (const part of splitLongText(text, maxBatchBytes)) {
+        const partSize = Buffer.byteLength(part, "utf-8");
+        if (batchSize + partSize + sepSize > maxBatchBytes) {
+          batches.push(batch);
+          batch = [part];
+          batchSize = partSize;
+        } else {
+          batch.push(part);
+          batchSize += partSize + sepSize;
+        }
+      }
+    } else if (batchSize + textSize + sepSize > maxBatchBytes) {
+      batches.push(batch);
+      batch = [text];
+      batchSize = textSize;
+    } else {
+      batch.push(text);
+      batchSize += textSize + sepSize;
+    }
+  }
+
+  if (batch.length) batches.push(batch);
+  return batches;
+}
+
+// 7. Core batchTranslate function
+async function batchTranslate(texts, targetLang) {
+  if (!texts.length) return texts;
+
+  const translationMap = {};
+  const textsToTranslate = [];
+  const maskedToOriginal = new Map();
+
+  for (const text of [...new Set(texts)]) {
+    const cacheKey = `${text}|${targetLang}`;
+    if (!text.trim()) {
+      translationMap[text] = text;
+    } else if (translationCache.has(cacheKey)) {
+      translationMap[text] = translationCache.get(cacheKey);
+    } else if (detectLanguage(text) !== targetLang) {
+      const masked = maskPhrases(text, targetLang);
+      maskedToOriginal.set(masked, text);
+      textsToTranslate.push(masked);
+    } else {
+      translationMap[text] = text;
+    }
+  }
+
+  const batches = createBatches(textsToTranslate);
+
+  try {
+    await limitedBatch(batches, 3, async (batch) => {
+      const joined = batch.join("\n----\n");
+      const params = {
+        Text: joined,
+        SourceLanguageCode: detectLanguage(batch[0]),
+        TargetLanguageCode: targetLang,
+      };
+
+      let res;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          // Use Bottleneck-wrapped call
+          res = await limiter.schedule(() =>
+            translate.translateText(params).promise()
+          );
+          break;
+        } catch (err) {
+          if (attempt === 2) throw err;
+          await sleep(500 * (attempt + 1));
+        }
+      }
+
+      const parts = res.TranslatedText.split("\n----\n");
+      batch.forEach((masked, i) => {
+        const original = maskedToOriginal.get(masked);
+        const translated = unmaskPhrases(parts[i] || masked);
+        translationMap[original] = translated;
+        translationCache.set(`${original}|${targetLang}`, translated);
+      });
+    });
+  } catch (err) {
+    console.error("Translation batch failed:", err);
+    return texts;
+  }
+
+  return texts.map((t) => translationMap[t] || t);
+}
+
+// 8. Middleware wiring
+
 const EXCLUDED_FIELDS = new Set([
-    "token",
-    "fcmToken",
-    "uri",
-    "image",
-    "isMember",
-    "dateOfJoining",
-    "isSocialLogin",
-    "createDate",
-    "updatedDate"
+  "token",
+  "fcmToken",
+  "uri",
+  "image",
+  "isMember",
+  "dateOfJoining",
+  "isSocialLogin",
+  "createDate",
+  "updatedDate",
 ]);
 
-const translationCache = new Map(); // In-memory cache
-
-// Utility to detect language based on script
-function detectLanguage(text) {
-    return /[\u0900-\u097F]/.test(text) ? "hi" : "en";
-}
-
-// Utility: Sleep for retry delay
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-// Utility: Split very long text into parts safely
-function splitLongText(text, maxBytesPerPart) {
-    const parts = [];
-    let currentPart = "";
-    let currentBytes = 0;
-
-    for (const word of text.split(' ')) {
-        const wordBytes = Buffer.byteLength(word + ' ', 'utf-8');
-        if ((currentBytes + wordBytes) > maxBytesPerPart) {
-            parts.push(currentPart.trim());
-            currentPart = word + ' ';
-            currentBytes = wordBytes;
-        } else {
-            currentPart += word + ' ';
-            currentBytes += wordBytes;
-        }
-    }
-    if (currentPart.trim()) {
-        parts.push(currentPart.trim());
-    }
-    return parts;
-}
-
-// Utility: Batch processing with concurrency limit
-async function limitedBatch(items, limit, asyncFn) {
-    const results = [];
-    let index = 0;
-
-    async function next() {
-        if (index >= items.length) return;
-        const i = index++;
-        results[i] = await asyncFn(items[i]);
-        await next();
-    }
-
-    const workers = [];
-    for (let i = 0; i < limit; i++) {
-        workers.push(next());
-    }
-
-    await Promise.all(workers);
-    return results;
-}
-
-// Main Translation Logic
-async function batchTranslate(textArray, targetLang) {
-    if (!textArray.length) return textArray;
-
-    const uniqueTexts = [...new Set(textArray)];
-    const translationMap = {};
-    const textsToTranslate = [];
-
-    const maxBytesPerBatch = 9500;
-    const maxBytesSingleText = 9000;
-
-    for (const text of uniqueTexts) {
-        if (!text.trim()) {
-            translationMap[text] = text;
-        } else if (translationCache.has(text + targetLang)) {
-            translationMap[text] = translationCache.get(text + targetLang);
-        } else if (detectLanguage(text) !== targetLang) {
-            const textBytes = Buffer.byteLength(text, 'utf-8');
-            if (textBytes > maxBytesSingleText) {
-                const parts = splitLongText(text, maxBytesSingleText);
-                parts.forEach(part => textsToTranslate.push(part));
-            } else {
-                textsToTranslate.push(text);
-            }
-        } else {
-            translationMap[text] = text;
-        }
-    }
-
-    if (textsToTranslate.length > 0) {
-        try {
-            const batches = [];
-            let currentBatch = [];
-            let currentBytes = 0;
-
-            for (const text of textsToTranslate) {
-                const textBytes = Buffer.byteLength(text, 'utf-8');
-                if ((currentBytes + textBytes) > maxBytesPerBatch) {
-                    batches.push(currentBatch);
-                    currentBatch = [];
-                    currentBytes = 0;
-                }
-                currentBatch.push(text);
-                currentBytes += textBytes;
-            }
-            if (currentBatch.length) {
-                batches.push(currentBatch);
-            }
-
-            await limitedBatch(batches, 5, async (batch) => {
-                const joinedText = batch.join("\n----\n");
-                const params = {
-                    Text: joinedText,
-                    SourceLanguageCode: detectLanguage(batch[0]),
-                    TargetLanguageCode: targetLang
-                };
-
-                let result;
-                let retries = 3;
-
-                while (retries > 0) {
-                    try {
-                        result = await translate.translateText(params).promise();
-                        break;
-                    } catch (err) {
-                        console.error(`Translation batch failed, retrying... (${3 - retries + 1})`);
-                        retries--;
-                        if (retries === 0) throw err;
-                        await sleep(1000);
-                    }
-                }
-
-                const translatedParts = result.TranslatedText.split("\n----\n");
-
-                batch.forEach((originalText, idx) => {
-                    const translatedText = translatedParts[idx] || originalText;
-                    translationMap[originalText] = translatedText;
-                    translationCache.set(originalText + targetLang, translatedText);
-                });
-            });
-
-        } catch (error) {
-            console.error("Translation Error:", error);
-            return textArray;
-        }
-    }
-
-    return textArray.map(text => translationMap[text] || text);
-}
-
-// Extract strings from a JSON while keeping paths
 function extractStrings(obj) {
-    const texts = [];
-    const paths = [];
-
-    function traverse(o, path = []) {
-        if (typeof o === "string") {
-            texts.push(o);
-            paths.push([...path]);
-        } else if (Array.isArray(o)) {
-            o.forEach((item, index) => traverse(item, [...path, index]));
-        } else if (typeof o === "object" && o !== null) {
-            Object.entries(o).forEach(([key, value]) => {
-                if (!EXCLUDED_FIELDS.has(key)) traverse(value, [...path, key]);
-            });
-        }
+  const texts = [],
+    paths = [];
+  (function trav(o, path = []) {
+    if (typeof o === "string") {
+      texts.push(o);
+      paths.push(path);
+    } else if (Array.isArray(o)) {
+      o.forEach((v, i) => trav(v, [...path, i]));
+    } else if (o && typeof o === "object") {
+      for (const [k, v] of Object.entries(o)) {
+        if (!EXCLUDED_FIELDS.has(k)) trav(v, [...path, k]);
+      }
     }
-
-    traverse(obj);
-    return { texts, paths };
+  })(obj);
+  return { texts, paths };
 }
 
-// Replace translated strings back into original JSON structure
-function replaceStrings(obj, translatedTexts, paths) {
-    let index = 0;
-
-    function traverse(o, path = []) {
-        if (paths.length > index && JSON.stringify(path) === JSON.stringify(paths[index])) {
-            return translatedTexts[index++];
-        } else if (Array.isArray(o)) {
-            return o.map((item, idx) => traverse(item, [...path, idx]));
-        } else if (typeof o === "object" && o !== null) {
-            return Object.fromEntries(
-                Object.entries(o).map(([key, value]) => [key, traverse(value, [...path, key])])
-            );
-        }
-        return o;
+function replaceStrings(obj, newTexts, paths) {
+  let idx = 0;
+  return (function trav(o, path = []) {
+    if (
+      idx < paths.length &&
+      JSON.stringify(path) === JSON.stringify(paths[idx])
+    ) {
+      return newTexts[idx++];
+    } else if (Array.isArray(o)) {
+      return o.map((v, i) => trav(v, [...path, i]));
+    } else if (o && typeof o === "object") {
+      return Object.fromEntries(
+        Object.entries(o).map(([k, v]) => [k, trav(v, [...path, k])])
+      );
     }
-
-    return traverse(obj);
+    return o;
+  })(obj);
 }
 
-// Express Middleware
 async function translateMiddleware(req, res, next) {
-    const originalJson = res.json;
-    const languageHeader = req.headers["accept-language"];
+  const originalJson = res.json;
+  const lang = req.headers["accept-language"];
+  if (!["hi", "en"].includes(lang)) return next();
 
-    if (!["hi", "en"].includes(languageHeader)) {
-        return next();
+  res.json = async (data) => {
+    try {
+      const { texts, paths } = extractStrings(data);
+      if (!texts.length) return originalJson.call(res, data);
+
+      const translated = await batchTranslate(texts, lang);
+      const newData = replaceStrings(data, translated, paths);
+      return originalJson.call(res, newData);
+    } catch (e) {
+      console.error("Translation Middleware Error:", e);
+      return originalJson.call(res, data);
     }
+  };
 
-    res.json = async function (data) {
-        try {
-            const targetLang = languageHeader;
-
-            const { texts, paths } = extractStrings(data);
-            if (texts.length === 0) return originalJson.call(this, data);
-
-            const translatedTexts = await batchTranslate(texts, targetLang);
-            const translatedData = replaceStrings(data, translatedTexts, paths);
-
-            originalJson.call(this, translatedData);
-        } catch (error) {
-            console.error("Middleware Translation Error:", error);
-            originalJson.call(this, data);
-        }
-    };
-
-    next();
+  next();
 }
 
 module.exports = translateMiddleware;
-
-
-
-
-
-
-
