@@ -17,7 +17,7 @@ const razorpay = new Razorpay({
 
 
 // INITIATE DONATION (Create Record + Razorpay Order)
-router.post("/initiate", verifyToken, async (req, res) => {
+router.post("/initiate", async (req, res) => {
   try {
     const formData = req.body;
     const donationId = uuidv4();
@@ -154,7 +154,7 @@ router.post("/webhook", async (req, res) => {
 });
 
 // GET ALL DONATIONS (Admin/Logged-in Users)
-router.get("/donations", verifyToken, async (req, res) => {
+router.get("/donations", async (req, res) => {
   try {
     const items = await getAllItems(TABLE_NAME);
     res.success({ data: items.Items });
