@@ -154,7 +154,7 @@ router.post("/webhook", async (req, res) => {
 });
 
 // GET ALL DONATIONS (Admin/Logged-in Users)
-router.get("/donations", async (req, res) => {
+router.get("/donations", verifyToken, async (req, res) => {
   try {
     const items = await getAllItems(TABLE_NAME);
     res.success({ data: items.Items });
@@ -165,7 +165,7 @@ router.get("/donations", async (req, res) => {
 });
 
 // GET DONATION BY ID (Admin/Logged-in Users)
-router.get("/:donationId", verifyToken, async (req, res) => {
+router.get("/:donationId", async (req, res) => {
   const { donationId } = req.params;
   try {
     const params = {
