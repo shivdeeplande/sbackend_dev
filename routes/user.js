@@ -458,9 +458,11 @@ router.post("/users", upload.single("file"), async (req, res) => {
       res.errors({ message: "Date of Birth Required" });
     } else if (!body.gender) {
       res.errors({ message: "Gender Required" });
-    } else if (!body.sessionId) {
-      res.errors({ message: "sessionId Required" });
-    } else {
+    } 
+    // else if (!body.sessionId) {
+    //   res.errors({ message: "sessionId Required" });
+    // } 
+    else {
       const userParams = {
         TableName: TABLE_NAME,
         FilterExpression:
