@@ -49,7 +49,10 @@ const options = {
 // Middleware to use i18n
 // app.use(i18n.init);
 app.use(translateMiddleware);
-app.use(cors());
+app.use(cors({
+  origin: ['https://hindsenaparty.com'],
+  credentials: true
+}));
 app.use(express.json());
 //app.use(morgan('dev'));
 app.use(responseFormatter)
@@ -81,5 +84,5 @@ app.use("/api/v1/donation", donationRoute);
 // Create HTTPS Server
 const server = https.createServer(options, app)
 server.listen(PORT, () => {
-    console.log(`🚀 HTTPS Server running at https://localhost:${PORT}`);
+    console.log(`🚀 HTTPS Server running at https://localhost:${PORT}`);  
   });

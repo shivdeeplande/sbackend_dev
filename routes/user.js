@@ -189,7 +189,7 @@ router.post("/login", async (req, res) => {
         },
       };
       const firstTimeuser = await getConditionalRecords(userParams);
-        console.log('firstTimeuser',firstTimeuser);
+        // console.log('firstTimeuser',firstTimeuser);
 
       if (firstTimeuser.length > 0) {
         const data = firstTimeuser[0];
@@ -220,7 +220,7 @@ router.post("/login", async (req, res) => {
           const resp = response.data;
           if (resp.Status === "Success") {
             const token = await generateAuthToken(userPayload);
-            console.log("Generated JWT:", token);
+            // console.log("Generated JWT:", token);
             data.token = token;
             data.sessionId = resp.Details;
             const itemObject = {
